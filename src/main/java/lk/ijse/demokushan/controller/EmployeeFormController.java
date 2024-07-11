@@ -3,28 +3,25 @@ package lk.ijse.demokushan.controller;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.AnchorPane;
-import javafx.stage.Stage;
 import lk.ijse.demokushan.Util.Regex;
-import lk.ijse.demokushan.model.Customer;
-import lk.ijse.demokushan.model.Employee;
-import lk.ijse.demokushan.model.TM.CustomerTM;
-import lk.ijse.demokushan.model.TM.EmployeeTM;
-import lk.ijse.demokushan.repository.CustomerRepo;
-import lk.ijse.demokushan.repository.EmployeeRepo;
-import lk.ijse.demokushan.repository.ProductRepo;
+import lk.ijse.demokushan.bo.BOFactory;
+import lk.ijse.demokushan.bo.custom.EmployeeBO;
+import lk.ijse.demokushan.dao.DAOFactory;
+import lk.ijse.demokushan.dto.EmployeeDTO;
+import lk.ijse.demokushan.entity.Employee;
+import lk.ijse.demokushan.view.tdm.EmployeeTM;
 
-import java.io.IOException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.jar.Attributes;
+
+import static lk.ijse.demokushan.Util.TextField.SALARY;
 
 public class EmployeeFormController {
 
@@ -48,7 +45,7 @@ public class EmployeeFormController {
 
     public AnchorPane rootNode;
     public TextField txtSearch;
-
+    EmployeeBO employeeBO = (EmployeeBO) BOFactory.getBoFactory().getBO(BOFactory.BOTypes.EMPLOYEE);
     public void initialize() {
         setcellValues();
         loadAllEmployee();
@@ -71,13 +68,15 @@ public class EmployeeFormController {
     }
     private void genarateNextEmployeeId() {
         try {
-            String currentId = EmployeeRepo.getCurrentId();
+            String currentId = employeeBO.generateNewID();
 
 
             String nextOrderId = genarateNextEmployeeId(currentId);
             txtId.setText(nextOrderId);
 
         } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }
@@ -97,7 +96,7 @@ public class EmployeeFormController {
         ObservableList<EmployeeTM> obList = FXCollections.observableArrayList();
 
         try {
-            List<Employee> cusList = EmployeeRepo.getAll();
+            ArrayList<Employee> cusList = employeeBO.getAll();
             for (Employee cusModle : cusList) {
 
                 EmployeeTM TM = new EmployeeTM(cusModle.getEmployeeId(), cusModle.getName(), cusModle.getContactNumber(), cusModle.getPosition(), cusModle.getSalary());
@@ -107,6 +106,8 @@ public class EmployeeFormController {
 
             }
         } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
 
@@ -127,7 +128,7 @@ public class EmployeeFormController {
         boolean nameValid = Regex.setTextColor(lk.ijse.demokushan.Util.TextField.NAME, txtName);
         boolean validPhone = Regex.setTextColor(lk.ijse.demokushan.Util.TextField.PHONENUMBER, txteNumber);
         boolean validPosition = Regex.setTextColor(lk.ijse.demokushan.Util.TextField.POSITION, txtposition);
-        boolean salaryValid = Regex.setTextColor(lk.ijse.demokushan.Util.TextField.SALARY, txtSalary);
+        boolean salaryValid = Regex.setTextColor(SALARY, txtSalary);
 
 
         return nameValid && idValied && validPhone && validPosition && salaryValid;
@@ -146,13 +147,15 @@ public class EmployeeFormController {
             Employee employee = new Employee(id, name, number, position, salary);
 
             try {
-                boolean isSaved = EmployeeRepo.save(employee);
+                boolean isSaved = employeeBO.add(employee);
                 if (isSaved) {
                     new Alert(Alert.AlertType.CONFIRMATION, "Employee saved!").show();
                     initialize();
                     clearFields();
                 }
             } catch (SQLException e) {
+                throw new RuntimeException(e);
+            } catch (ClassNotFoundException e) {
                 throw new RuntimeException(e);
             }
         } else {
@@ -182,7 +185,7 @@ public class EmployeeFormController {
     }
 
     public void salaryKeyReleaseOnAction(javafx.scene.input.KeyEvent keyEvent) {
-        Regex.setTextColor(lk.ijse.demokushan.Util.TextField.SALARY, txtSalary);
+        Regex.setTextColor(SALARY, txtSalary);
     }
 
     public void btnClearOnAction(ActionEvent actionEvent) {
@@ -198,52 +201,56 @@ public class EmployeeFormController {
         txtSalary.setText("");
     }
 
+
+
     public void btnUpadateOnAction(ActionEvent actionEvent) {
-
-
         if (isValidIdee()) {
+            try {
+                String id = txtId.getText();
+                String name = txtName.getText();
+                String phoneNumber = txteNumber.getText();
+                String position = txtposition.getText();
+                String salary = txtSalary.getText();
 
-        String id = txtId.getText();
-        String name = txtName.getText();
-        String phoneNumber = txteNumber.getText();
-        String position = txtposition.getText();
-        String salary = txtSalary.getText();
+                EmployeeDTO employee = new EmployeeDTO(id, name, phoneNumber, position, salary);
 
-        Employee employee = new Employee(id, name, phoneNumber, position, salary);
-
-        try {
-            boolean isUpdated = EmployeeRepo.update(employee);
-            if (isUpdated) {
-                new Alert(Alert.AlertType.CONFIRMATION, "employee updated!").show();
-
-                initialize();
-                clearFields();
+                boolean isUpdated = employeeBO.update(employee);
+                System.out.println(isUpdated);
+                if (isUpdated) {
+                    new Alert(Alert.AlertType.CONFIRMATION, "Employee updated successfully!");
+                    initialize(); // Reload data or reset UI
+                    clearFields(); // Clear input fields after successful update
+                } else {
+                    new Alert(Alert.AlertType.ERROR, "Failed to update employee.");
+                }
+            } catch (SQLException e) {
+                new Alert(Alert.AlertType.ERROR, "Error updating employee: " + e.getMessage()).show();
+            } catch (ClassNotFoundException e) {
+                new Alert(Alert.AlertType.ERROR, "Database driver not found.").show();
+                throw new RuntimeException(e); // Rethrow as runtime exception for logging and debugging
             }
-        } catch (SQLException e) {
-            new Alert(Alert.AlertType.ERROR, e.getMessage()).show();
-        }
-        } else{
-
+        } else {
             Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.setTitle("Validation Error");
             alert.setHeaderText("Validation Failed");
-            alert.setContentText("Please enter valid Employee ID correctly.");
+            alert.setContentText("Please enter valid employee information.");
             alert.showAndWait();
         }
-
     }
+
+
     public boolean isValidIdee(){
         boolean idValied = Regex.setTextColor(lk.ijse.demokushan.Util.TextField.SALARY, txtSalary);
 
         return idValied ;
     }
 
-    public void btnSearchOnAction(ActionEvent actionEvent) throws SQLException {
+    public void btnSearchOnAction(ActionEvent actionEvent) throws SQLException, ClassNotFoundException {
         if(isValidIde()){
 
         String id = txtId.getText();
 
-        Employee employee = EmployeeRepo.searchById(id);
+        Employee employee = employeeBO.search(id);
         if (employee != null) {
             txtId.setText(employee.getEmployeeId());
             txtName.setText(employee.getName());
@@ -274,7 +281,7 @@ public class EmployeeFormController {
             String id = txtId.getText();
 
             try {
-                boolean isDeleted = EmployeeRepo.delete(id);
+                boolean isDeleted = employeeBO.delete(id);
                 if (isDeleted) {
                     new Alert(Alert.AlertType.CONFIRMATION, "employee deleted!").show();
 
@@ -284,6 +291,8 @@ public class EmployeeFormController {
                 }
             } catch (SQLException e) {
                 new Alert(Alert.AlertType.ERROR, e.getMessage()).show();
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException(e);
             }
         } else {
             Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -300,11 +309,11 @@ public class EmployeeFormController {
         return idValied;
     }
 
-    public void btnSearchchOnAction(ActionEvent actionEvent) throws SQLException {
+    public void btnSearchchOnAction(ActionEvent actionEvent) throws SQLException, ClassNotFoundException {
 
         String id = txtSearch.getText();
 
-        Employee employee = EmployeeRepo.searchById(id);
+        Employee employee = employeeBO.search(id);
         if (employee != null) {
             txtId.setText(employee.getEmployeeId());
             txtName.setText(employee.getName());

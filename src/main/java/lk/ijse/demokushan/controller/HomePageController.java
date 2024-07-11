@@ -6,19 +6,16 @@ import javafx.animation.Timeline;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
-import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.Scene;
 import javafx.scene.chart.PieChart;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
-import javafx.scene.control.ListView;
 import javafx.scene.layout.AnchorPane;
-import javafx.stage.Stage;
 import javafx.util.Duration;
-import lk.ijse.demokushan.model.Customer;
-import lk.ijse.demokushan.model.TM.MostAppointmentTM;
-import lk.ijse.demokushan.repository.*;
+import lk.ijse.demokushan.dao.DAOFactory;
+import lk.ijse.demokushan.dao.custom.*;
+import lk.ijse.demokushan.entity.Customer;
+import lk.ijse.demokushan.view.tdm.MostAppointmentTM;
 
 import java.io.IOException;
 import java.net.URL;
@@ -27,8 +24,6 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-
-import static lk.ijse.demokushan.repository.SupplierRepo.getSupplierCount;
 
 public class HomePageController {
     public AnchorPane root;
@@ -71,7 +66,21 @@ public class HomePageController {
     private  int sCount;
 
 
-    public void initialize() {
+
+
+    CustomerDAO customerDAO = (CustomerDAO) DAOFactory.getDaoFactory().getDAO(DAOFactory.DAOTypes.CUSTOMER);
+    AppointmentDAO appointmentDAO = (AppointmentDAO) DAOFactory.getDaoFactory().getDAO(DAOFactory.DAOTypes.APPOINTMENT);
+    EmployeeDAO employeeDAO = (EmployeeDAO) DAOFactory.getDaoFactory().getDAO(DAOFactory.DAOTypes.EMPLOYEE);
+    SupplierDAO supplierDAO = (SupplierDAO) DAOFactory.getDaoFactory().getDAO(DAOFactory.DAOTypes.SUPPLIER);
+    PaymentDAO paymentDAO = (PaymentDAO) DAOFactory.getDaoFactory().getDAO(DAOFactory.DAOTypes.PAYMENT);
+    QueryDAO queryDAO = (QueryDAO) DAOFactory.getDaoFactory().getDAO(DAOFactory.DAOTypes.QUERY);
+
+
+
+
+
+
+    public void initialize() throws ClassNotFoundException {
         setTime();
         setDate();
         pieChartConnect();
@@ -82,13 +91,13 @@ public class HomePageController {
 
 
         try {
-            cCount = CustomerRepo.getCustomerCount();
-            completeCount = AppointmentRepo.getCompleteAppointmentCount();
-            incompleteCount = AppointmentRepo.getIncompleteAppointmentCount();
+            cCount = customerDAO.getCustomerCount();
+            completeCount = appointmentDAO.getCompleteAppointmentCount();
+            incompleteCount = appointmentDAO.getIncompleteAppointmentCount();
             aCount = completeCount + incompleteCount;
-            eCount = EmployeeRepo.getEmployeeCount();
-            sCount = SupplierRepo.getSupplierCount();
-            fullPaymentCount = PaymentRepo.getAllPaymentCount();
+            eCount = employeeDAO.getEmployeeCount();
+            sCount = supplierDAO.getSupplierCount();
+            fullPaymentCount = paymentDAO.getAllPaymentCount();
 
         } catch (SQLException e) {
             new Alert(Alert.AlertType.ERROR, e.getMessage()).show();
@@ -131,18 +140,18 @@ public class HomePageController {
         lblFullPaymentCount.setText(String.valueOf(fullPaymentCount));
     }
 
-    public void pieChartConnect() {
+    public void pieChartConnect() throws ClassNotFoundException {
 
         List<MostAppointmentTM> itemList = null;
         try {
-            itemList = DashBoardRepo.getMostSellItem();
+            itemList = queryDAO.getMostSellItem();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
         Customer item;
         for (MostAppointmentTM sellItem : itemList) {
             try {
-                item = CustomerRepo.searchById(sellItem.getCustomerId());
+                item = customerDAO.search(sellItem.getCustomerId());
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }

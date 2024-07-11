@@ -1,6 +1,5 @@
 package lk.ijse.demokushan.controller;
 
-import com.jfoenix.controls.JFXButton;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -13,24 +12,29 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 import lk.ijse.demokushan.Util.Regex;
+import lk.ijse.demokushan.bo.BOFactory;
+import lk.ijse.demokushan.bo.custom.*;
 import lk.ijse.demokushan.db.DbConnection;
-import lk.ijse.demokushan.model.*;
-import lk.ijse.demokushan.model.TM.*;
-import lk.ijse.demokushan.repository.*;
+import lk.ijse.demokushan.dto.AppointmentDTO;
+import lk.ijse.demokushan.dto.FeedbackDTO;
+import lk.ijse.demokushan.dto.PaymentDTO;
+import lk.ijse.demokushan.entity.Appointment;
+import lk.ijse.demokushan.entity.Feedback;
+import lk.ijse.demokushan.entity.Payment;
+import lk.ijse.demokushan.view.tdm.AppointmentTM;
+import lk.ijse.demokushan.view.tdm.FeedbackTM;
+import net.sf.jasperreports.engine.*;
+import net.sf.jasperreports.engine.design.JasperDesign;
+import net.sf.jasperreports.engine.xml.JRXmlLoader;
+import net.sf.jasperreports.view.JasperViewer;
 
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
-
-
-import net.sf.jasperreports.engine.*;
-import net.sf.jasperreports.engine.design.JasperDesign;
-import net.sf.jasperreports.engine.xml.JRXmlLoader;
-//import net.sf.jasperreports.view.JasperViewe;
-import net.sf.jasperreports.view.JasperViewer;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class AppointmentFormController {
     public Rectangle rectangal;
@@ -45,10 +49,10 @@ public class AppointmentFormController {
 
     public TextField txtTime;
     public ComboBox cmbProductName;
-    public javafx.scene.control.DatePicker txtDatePicker;
+    public DatePicker txtDatePicker;
     public ComboBox cmbCustomerId;
     public ComboBox cmbEmployeeId;
-    public ComboBox cmbHairCutStyle;
+    public ComboBox<String> cmbHairCutStyle;
     public Label lblQty;
     public TextField txtQty;
     public Label lblQty1;
@@ -70,6 +74,13 @@ public class AppointmentFormController {
     public Label lblDate;
     public TableColumn colAction;
     public TextField txtSearch;
+
+    AppointmentBO appointmentBO =(AppointmentBO) BOFactory.getBoFactory().getBO(BOFactory.BOTypes.APPOINTMENT);
+    EmployeeBO employeeBO = (EmployeeBO) BOFactory.getBoFactory().getBO(BOFactory.BOTypes.EMPLOYEE);
+    CustomerBO customerBO  = (CustomerBO) BOFactory.getBoFactory().getBO(BOFactory.BOTypes.CUSTOMER);
+    PaymentBO paymentBO =(PaymentBO) BOFactory.getBoFactory().getBO(BOFactory.BOTypes.PAYMENT);
+    FeedbackBO feedbackBO =(FeedbackBO) BOFactory.getBoFactory().getBO(BOFactory.BOTypes.FEEDBACK);
+    HairCutBO hairCutBO = (HairCutBO) BOFactory.getBoFactory().getBO(BOFactory.BOTypes.HAIRCUT);
 
     public void initialize() {
         setcellValuese();
@@ -130,7 +141,7 @@ public class AppointmentFormController {
         ObservableList<FeedbackTM> obList = FXCollections.observableArrayList();
 
         try {
-            List<Feedback> feedbackList = FeedbackRepo.getAll();
+            List<Feedback> feedbackList = feedbackBO.getAll();
             for (Feedback fbModle : feedbackList) {
 
                 FeedbackTM TM = new FeedbackTM(fbModle.getFeedbackId(), fbModle.getComment(), fbModle.getAppointmentId());
@@ -138,28 +149,16 @@ public class AppointmentFormController {
                 obList.add(TM);
                 TableFeedback.setItems(obList);
 
-//                JFXButton btnRemove = new JFXButton("Remove");
-//                btnRemove.setOnAction((k) -> {
-//                    ButtonType yes = new ButtonType("yes", ButtonBar.ButtonData.OK_DONE);
-//                    ButtonType no = new ButtonType("no", ButtonBar.ButtonData.CANCEL_CLOSE);
-//
-//                    Optional<ButtonType> type = new Alert(Alert.AlertType.INFORMATION, "Are you sure to remove?", yes, no).showAndWait();
-//
-//                    if (type.orElse(no) == yes) {
-//                        int selectedIndex = TableFeedback.getSelectionModel().getSelectedIndex();
-//                        obList.remove(selectedIndex);
-//                        TableFeedback.refresh();
-//
-//                    }
-//                });
 
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
         }
     }
 
-    public void btnCompleteOnAction(ActionEvent actionEvent) throws SQLException {
+    public void btnCompleteOnAction(ActionEvent actionEvent) throws SQLException, ClassNotFoundException {
 
         String status = (String) cmbStatus.getValue();
 
@@ -171,32 +170,24 @@ public class AppointmentFormController {
         String fId = lblFeedbackId.getText();
         String comment = (String) cmbComment.getValue();
 
+        PaymentDTO payment = new PaymentDTO(paymentId, paymentType, appointmentId, amount);
+        FeedbackDTO feedback = new FeedbackDTO(fId, comment, appointmentId);
 
+        String hairCutId = hairCutBO.getHairCutId(cmbHairCutStyle.getValue());
 
-        Payment payment = new Payment(paymentId, paymentType, appointmentId, amount);
-        Feedback feedback = new Feedback(fId, comment, appointmentId);
-
-
-        List<String> hId = HairCutRepo.getHairCutId((String) cmbHairCutStyle.getValue());
-        String hairCutId = hId.get(0);
 
         try {
-            boolean isPlaced = AppointmentRepo.completeAppointment(payment, feedback, hairCutId);
+            boolean isPlaced = appointmentBO.completeAppointment(payment, feedback, hairCutId);
             if (isPlaced) {
                 new Alert(Alert.AlertType.CONFIRMATION, "Appointment complete Successfully!").show();
 
                 initialize();
                 lblTotal.setText("");
-
-
             } else {
                 new Alert(Alert.AlertType.WARNING, "Failed to complete appointment!").show();
             }
-
             initialize();
             clearFields();
-
-
         } catch (SQLException e) {
             new Alert(Alert.AlertType.ERROR, e.getMessage()).show();
 
@@ -215,12 +206,14 @@ public class AppointmentFormController {
 
     private void genarateNextFeedbackId() {
         try {
-            String currentId = FeedbackRepo.getCurrentId();
+            String currentId = feedbackBO.generateNewID();
 
             String nextOrderId = genarateNextFeedbackId(currentId);
             lblFeedbackId.setText(nextOrderId);
 
         } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }
@@ -246,12 +239,14 @@ public class AppointmentFormController {
 
     private void genarateNextPaymentId() {
         try {
-            String currentId = PaymentRepo.getCurrentId();
+            String currentId = paymentBO.generateNewID();
 
             String nextPaymentId = genarateNextPaymentId(currentId);
             lblPaymentId.setText(nextPaymentId);
 
         } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }
@@ -267,12 +262,14 @@ public class AppointmentFormController {
 
     private void genarateNextAppointmentId() {
         try {
-            String currentId = AppointmentRepo.getCurrentId();
+            String currentId = appointmentBO.generateNewID();
 
             String nextOrderId = genarateNextAppointmentId(currentId);
             txtApId.setText(nextOrderId);
 
         } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }
@@ -292,14 +289,14 @@ public class AppointmentFormController {
 
         try {
 
-            List<String> nameList = AppointmentRepo.getStatus();
+            List<String> nameList = appointmentBO.getStatus();
 
             for (String code : nameList) {
                 obList.add(code);
             }
             cmbStatus.setItems(obList);
 
-        } catch (SQLException e) {
+        } catch (SQLException | ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }
@@ -309,7 +306,7 @@ public class AppointmentFormController {
 
         ObservableList<String> obList = FXCollections.observableArrayList();
         try {
-            List<String> nameList = EmployeeRepo.getEmployeeId();
+            List<String> nameList = employeeBO.getEmployeeId();
 
             for (String code : nameList) {
                 obList.add(code);
@@ -318,13 +315,15 @@ public class AppointmentFormController {
 
         } catch (SQLException e) {
             throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
         }
     }
 
     private void loadCmbHairStyle() {
         ObservableList<String> obList = FXCollections.observableArrayList();
         try {
-            List<String> nameList = HairCutRepo.getHairCutNames();
+            List<String> nameList = hairCutBO.getHairCutNames();
 
             for (String code : nameList) {
                 obList.add(code);
@@ -332,6 +331,8 @@ public class AppointmentFormController {
             cmbHairCutStyle.setItems(obList);
 
         } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }
@@ -341,7 +342,7 @@ public class AppointmentFormController {
 
         ObservableList<String> obList = FXCollections.observableArrayList();
         try {
-            List<String> nameList = CustomerRepo.getCustomerId();
+            List<String> nameList = customerBO.getCustomerId();
 
             for (String code : nameList) {
                 obList.add(code);
@@ -349,6 +350,8 @@ public class AppointmentFormController {
             cmbCustomerId.setItems(obList);
 
         } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }
@@ -358,7 +361,7 @@ public class AppointmentFormController {
         ObservableList<AppointmentTM> obList = FXCollections.observableArrayList();
 
         try {
-            List<Appointment> appointmentList = AppointmentRepo.getAll();
+            List<Appointment> appointmentList = appointmentBO.getAll();
             for (Appointment apModle : appointmentList) {
 
                 AppointmentTM TM = new AppointmentTM(apModle.getAppointmentId(), apModle.getTime(), apModle.getDate(), apModle.getEmployeeId(), apModle.getCustomerId(), apModle.getHairCutId(), apModle.getStatus());
@@ -368,6 +371,8 @@ public class AppointmentFormController {
 
             }
         } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }
@@ -400,7 +405,7 @@ public class AppointmentFormController {
         return idValied;
     }
 
-    public void btnSaveOnAction(ActionEvent actionEvent) throws SQLException {
+    public void btnSaveOnAction(ActionEvent actionEvent) throws SQLException, ClassNotFoundException {
 
         if (isValied()) {
 
@@ -418,16 +423,15 @@ public class AppointmentFormController {
             }
 
 
-            List<String> employeeIdList = EmployeeRepo.getEmployeeId(employeeId);
+            List<String> employeeIdList = employeeBO.getEmployeeId(employeeId);
             System.out.println(employeeIdList.get(0));
 
-            List<String> hairCutIdList = HairCutRepo.getHairCutId(hairCutName);
-            System.out.println(hairCutIdList.get(0));
+            String hairCutId = hairCutBO.getHairCutId(hairCutName);
 
-            Appointment appointment = new Appointment(appointmentId, time, date.toString(), employeeIdList.get(0), customerId, hairCutIdList.get(0), status);
+            AppointmentDTO appointmentDTO = new AppointmentDTO(appointmentId, time, date.toString(), employeeIdList.get(0), customerId, hairCutId, status);
 
             try {
-                boolean isSaved = AppointmentRepo.save(appointment);
+                boolean isSaved = appointmentBO.add(appointmentDTO);
                 if (isSaved) {
                     new Alert(Alert.AlertType.CONFIRMATION, "All data saved").show();
                     initialize();
@@ -437,6 +441,8 @@ public class AppointmentFormController {
                 }
             } catch (SQLException e) {
 
+                throw new RuntimeException(e);
+            } catch (ClassNotFoundException e) {
                 throw new RuntimeException(e);
             }
         } else {
@@ -482,10 +488,10 @@ public class AppointmentFormController {
         String hairCutId = (String) cmbHairCutStyle.getValue();
         String status = (String) cmbStatus.getValue();
 
-        Appointment appointment = new Appointment(appointmentId, time, date.toString(), emloyeeId, customerId, hairCutId, status);
+       AppointmentDTO appointmentDTO = new AppointmentDTO(appointmentId, time, date.toString(), emloyeeId, customerId, hairCutId, status);
 
         try {
-            boolean isUpdated = AppointmentRepo.update(appointment);
+            boolean isUpdated = appointmentBO.update(appointmentDTO);
             if (isUpdated) {
                 new Alert(Alert.AlertType.CONFIRMATION, "appointment updated!").show();
 
@@ -494,6 +500,8 @@ public class AppointmentFormController {
             }
         } catch (SQLException e) {
             new Alert(Alert.AlertType.ERROR, e.getMessage()).show();
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
         }
 
     }
@@ -505,7 +513,7 @@ public class AppointmentFormController {
             String id = txtApId.getText();
 
             try {
-                boolean isDeleted = AppointmentRepo.delete(id);
+                boolean isDeleted = appointmentBO.delete(id);
                 if (isDeleted) {
                     new Alert(Alert.AlertType.CONFIRMATION, "Appointment deleted!").show();
 
@@ -514,6 +522,8 @@ public class AppointmentFormController {
                 }
             } catch (SQLException e) {
                 new Alert(Alert.AlertType.ERROR, e.getMessage()).show();
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException(e);
             }
         } else {
 
@@ -532,13 +542,13 @@ public class AppointmentFormController {
     }
 
 
-    public void btnSearchOnAction(ActionEvent actionEvent) throws SQLException {
+    public void btnSearchOnAction(ActionEvent actionEvent) throws SQLException, ClassNotFoundException {
 
         if(isValidIde()){
 
         String id = txtApId.getText();
 
-        Appointment appointment = AppointmentRepo.searchById(id);
+        Appointment appointment = appointmentBO.search(id);
 
         if (appointment != null) {
 
@@ -550,7 +560,7 @@ public class AppointmentFormController {
             cmbHairCutStyle.setValue(appointment.getHairCutId());
             cmbStatus.setValue(appointment.getStatus());
 
-            lblTotal.setText(HairCutRepo.getHairCutPrice(appointment.getHairCutId()));
+            lblTotal.setText(hairCutBO.getHairCutPrice(appointment.getHairCutId()));
 
         } else {
             new Alert(Alert.AlertType.INFORMATION, "appointment not found!").show();
@@ -586,11 +596,11 @@ public boolean isValidIde(){
 
         }
 
-    public void btnSearchchOnAction(ActionEvent actionEvent) throws SQLException {
+    public void btnSearchchOnAction(ActionEvent actionEvent) throws SQLException, ClassNotFoundException {
 
         String id = txtSearch.getText();
 
-        Appointment appointment = AppointmentRepo.searchById(id);
+        Appointment appointment = appointmentBO.search(id);
 
         if (appointment != null) {
 
@@ -602,10 +612,41 @@ public boolean isValidIde(){
             cmbHairCutStyle.setValue(appointment.getHairCutId());
             cmbStatus.setValue(appointment.getStatus());
 
-            lblTotal.setText(HairCutRepo.getHairCutPrice(appointment.getHairCutId()));
+            lblTotal.setText(hairCutBO.getHairCutPrice(appointment.getHairCutId()));
 
         } else {
             new Alert(Alert.AlertType.INFORMATION, "appointment not found!").show();
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//                JFXButton btnRemove = new JFXButton("Remove");
+//                btnRemove.setOnAction((k) -> {
+//                    ButtonType yes = new ButtonType("yes", ButtonBar.ButtonData.OK_DONE);
+//                    ButtonType no = new ButtonType("no", ButtonBar.ButtonData.CANCEL_CLOSE);
+//
+//                    Optional<ButtonType> type = new Alert(Alert.AlertType.INFORMATION, "Are you sure to remove?", yes, no).showAndWait();
+//
+//                    if (type.orElse(no) == yes) {
+//                        int selectedIndex = TableFeedback.getSelectionModel().getSelectedIndex();
+//                        obList.remove(selectedIndex);
+//                        TableFeedback.refresh();
+//
+//                    }
+//                });

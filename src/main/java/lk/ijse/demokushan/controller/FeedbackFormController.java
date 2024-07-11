@@ -1,24 +1,16 @@
 package lk.ijse.demokushan.controller;
 
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
-import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Scene;
-import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.shape.Rectangle;
-import javafx.stage.Stage;
-import lk.ijse.demokushan.model.Feedback;
-import lk.ijse.demokushan.model.Supplier;
-import lk.ijse.demokushan.model.TM.FeedbackTM;
-import lk.ijse.demokushan.repository.*;
+import lk.ijse.demokushan.bo.BOFactory;
+import lk.ijse.demokushan.bo.custom.FeedbackBO;
 
-import java.io.IOException;
 import java.sql.SQLException;
-import java.util.List;
 
 public class FeedbackFormController {
 
@@ -35,6 +27,8 @@ public class FeedbackFormController {
     public TableColumn colAppointmentId;
     public ComboBox cmbAppointmentId;
     public TableColumn colAction;
+
+    FeedbackBO feedbackBO =(FeedbackBO) BOFactory.getBoFactory().getBO(BOFactory.BOTypes.FEEDBACK);
 
 
     public  void initialize() {

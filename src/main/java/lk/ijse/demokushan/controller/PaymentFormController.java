@@ -2,32 +2,24 @@ package lk.ijse.demokushan.controller;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.SortedList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.control.skin.DatePickerSkin;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.shape.Rectangle;
-import javafx.stage.Stage;
 import lk.ijse.demokushan.Util.Regex;
-import lk.ijse.demokushan.model.Customer;
-import lk.ijse.demokushan.model.Employee;
-import lk.ijse.demokushan.model.Payment;
-import lk.ijse.demokushan.model.TM.CustomerTM;
-import lk.ijse.demokushan.model.TM.EmployeeTM;
-import lk.ijse.demokushan.model.TM.PaymentTM;
-import lk.ijse.demokushan.repository.*;
+import lk.ijse.demokushan.bo.BOFactory;
+import lk.ijse.demokushan.bo.custom.AppointmentBO;
+import lk.ijse.demokushan.bo.custom.PaymentBO;
+import lk.ijse.demokushan.dto.PaymentDTO;
+import lk.ijse.demokushan.entity.Payment;
+import lk.ijse.demokushan.view.tdm.PaymentTM;
+//import lk.ijse.demokushan.repository.*;
 
-import java.io.IOException;
-import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.Date;
+import java.util.ArrayList;
 import java.util.List;
 
 //import static jdk.internal.agent.Agent.getText;
@@ -49,9 +41,11 @@ public class PaymentFormController {
     public javafx.scene.control.DatePicker txtDatePicker;
     public ComboBox cmbAppointmentId;
     public TableColumn colAppointmentId;
-
     public Rectangle rectangal;
     public TextField txtSearch;
+
+    PaymentBO paymentBO =(PaymentBO) BOFactory.getBoFactory().getBO(BOFactory.BOTypes.PAYMENT);
+    AppointmentBO appointmentBO =(AppointmentBO) BOFactory.getBoFactory().getBO(BOFactory.BOTypes.APPOINTMENT);
 
     public  void initialize(){
         setcellValues();
@@ -76,12 +70,14 @@ public class PaymentFormController {
 
     private void genarateNextPaymentId() {
         try {
-            String currentId = PaymentRepo.getCurrentId();
+            String currentId = paymentBO.generateNewID();
 
             String nextOrderId = genarateNextPaymentId(currentId);
             txtId.setText(nextOrderId);
 
         } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }
@@ -99,23 +95,26 @@ public class PaymentFormController {
 
         ObservableList<String> obList = FXCollections.observableArrayList();
         try {
-            List<String> nameList = AppointmentRepo.getAppointmentId();
+            List<String> nameList = appointmentBO.getAppointmentId();
 
             for (String code : nameList) {
                 obList.add(code);
             }
             cmbAppointmentId.setItems(obList);
 
-        } catch (SQLException e) {
+        } catch (SQLException | ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }
+
+
+
     private  void loadAllPayment(){
 
         ObservableList<PaymentTM> obList = FXCollections.observableArrayList();
 
         try {
-            List<Payment> paymentsList = PaymentRepo.getAll();
+            List<Payment> paymentsList = paymentBO.getAll();
             for (Payment payModle : paymentsList){
 
                 PaymentTM TM = new PaymentTM(payModle.getPaymentId(),payModle.getPaymentType(),payModle.getAppintmentId(),payModle.getAmount());
@@ -126,8 +125,33 @@ public class PaymentFormController {
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
         }
     }
+
+
+
+    /*private  void loadAllPayment(){
+
+        SortedList<Object> obList = FXCollections.observableArrayList().sorted();
+
+        try {
+            List<Payment> paymentsList = paymentBO.getAll();
+            for (Payment payModle : paymentsList){
+
+                PaymentTM TM = new PaymentTM(payModle.getPaymentId(),payModle.getPaymentType(),payModle.getAppintmentId(),payModle.getAmount());
+
+                obList.add(TM);
+                tablePayment.setItems(obList);
+
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }*/
     private  void setcellValues(){
 
         colPId.setCellValueFactory(new PropertyValueFactory<>("paymentId"));
@@ -148,7 +172,7 @@ public class PaymentFormController {
     }
 
     @FXML
-    public void btnSaveOnAction(ActionEvent actionEvent) throws SQLException {
+    public void btnSaveOnAction(ActionEvent actionEvent) throws SQLException, ClassNotFoundException {
 
         if (isValied()) {
 
@@ -157,12 +181,13 @@ public class PaymentFormController {
             String appointmentId = (String) cmbAppointmentId.getValue();
             String amount = txtAmount.getText();
 
-            List<String> appintmentIdList = AppointmentRepo.getAppointmentId(appointmentId);
+            List<String> appintmentIdList = appointmentBO.getAppointmentId(appointmentId);
+
             System.out.println(appintmentIdList.get(0));
-            Payment payment = new Payment(paymentId, paymentType, appintmentIdList.get(0), amount);
+            PaymentDTO paymentDTO = new PaymentDTO(paymentId, paymentType, appintmentIdList.get(0), amount);
 
             try {
-                boolean isSaved = PaymentRepo.save(payment);
+                boolean isSaved = paymentBO.add(paymentDTO);
                 if (isSaved) {
                     new Alert(Alert.AlertType.CONFIRMATION, "payment saved!").show();
 
@@ -170,6 +195,8 @@ public class PaymentFormController {
                     clearFields();
                 }
             } catch (SQLException e) {
+                throw new RuntimeException(e);
+            } catch (ClassNotFoundException e) {
                 throw new RuntimeException(e);
             }
         }else {
@@ -214,7 +241,7 @@ public class PaymentFormController {
             String id = txtId.getText();
 
             try {
-                boolean isDeleted = PaymentRepo.delete(id);
+                boolean isDeleted = paymentBO.delete(id);
                 if (isDeleted) {
                     new Alert(Alert.AlertType.CONFIRMATION, "payment deleted!").show();
 
@@ -223,6 +250,8 @@ public class PaymentFormController {
                 }
             } catch (SQLException e) {
                 new Alert(Alert.AlertType.ERROR, e.getMessage()).show();
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException(e);
             }
         }else{
             Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -240,13 +269,13 @@ public class PaymentFormController {
     }
 
 
-    public void btnSearchOnAction(ActionEvent actionEvent) throws SQLException {
+    public void btnSearchOnAction(ActionEvent actionEvent) throws SQLException, ClassNotFoundException {
 
         if(isValidIde()){
 
         String id = txtId.getText();
 
-        Payment payment = PaymentRepo.searchById(id);
+        Payment payment = paymentBO.search(id);
         if (payment != null) {
             txtId.setText(payment.getPaymentId());
             txtTyp.setText(payment.getPaymentType());
@@ -271,11 +300,12 @@ public boolean isValidIde() {
     return idValied;
 }
 
-    public void btnSearchchOnAction(ActionEvent actionEvent) throws SQLException {
+    public void btnSearchchOnAction(ActionEvent actionEvent) throws SQLException, ClassNotFoundException {
 
         String id = txtSearch.getText();
 
-        Payment payment = PaymentRepo.searchById(id);
+        Payment payment = paymentBO.search(id);
+
         if (payment != null) {
             txtId.setText(payment.getPaymentId());
             txtTyp.setText(payment.getPaymentType());

@@ -15,19 +15,13 @@ import lk.ijse.demokushan.Util.Regex;
 import java.io.IOException;
 
 public class LoginFormController {
-
-
     public TextField txtName;
     public TextField txtPassword;
     public AnchorPane rootNode;
     public ImageView icon1;
     public ImageView icon2;
-
-
     @FXML
     boolean btnLoginOnAction(ActionEvent actionEvent) throws IOException {
-
-//        if (isValied()) {
 
             String name = "a";
             String pass = "a";
@@ -43,8 +37,7 @@ public class LoginFormController {
             }
             return false;
 
-}
-
+        }
 
         private void navigateToTheDashboard () throws IOException {
 
@@ -59,7 +52,6 @@ public class LoginFormController {
             stage.setTitle("Dashboard");
 
         }
-
 
         public void btnNameOnAction (KeyEvent actionEvent) throws IOException {
 
@@ -80,15 +72,12 @@ public class LoginFormController {
         }
 
         public void btnPasswordOnAction (ActionEvent actionEvent) throws IOException {
+
             String name = "a";
             String pass = "a";
 
-
             String userId = txtName.getText();
             String pw = txtPassword.getText();
-
-
-
 
             if (userId.equals(name) && pass.equals(pw)) {
                 navigateToTheDashboard();
@@ -96,8 +85,6 @@ public class LoginFormController {
                 new Alert(Alert.AlertType.ERROR, "password is wrong ").show();
             }
         }
-
-
     }
 
 

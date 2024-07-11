@@ -1,99 +1,162 @@
 package lk.ijse.demokushan.controller;
 
-import javafx.animation.*;
+import com.jfoenix.controls.JFXButton;
+import javafx.animation.Animation;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.Scene;
-import javafx.scene.chart.*;
-import javafx.scene.control.*;
-import javafx.scene.image.ImageView;
+import javafx.scene.chart.PieChart;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Label;
 import javafx.scene.layout.AnchorPane;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
-import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
-import javafx.stage.Stage;
 import javafx.util.Duration;
-import jdk.internal.access.JavaNetUriAccess;
-import lk.ijse.demokushan.model.Appointment;
-import lk.ijse.demokushan.model.Customer;
-import lk.ijse.demokushan.model.TM.MostAppointmentTM;
-import lk.ijse.demokushan.repository.*;
+import lk.ijse.demokushan.dao.DAOFactory;
+import lk.ijse.demokushan.dao.custom.*;
 
 import java.io.IOException;
 import java.net.URL;
 import java.sql.SQLException;
-import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-import static javafx.fxml.FXMLLoader.load;
-
 public class DashBoardFormController {
 
-    public Rectangle rectangal;
+    @FXML
+    private JFXButton AppointmentBtn;
 
-    public AnchorPane rootNode;
-    public Button CustomerBtn;
-    public Button EmployeeBtn;
-    public Button HairCutBtn;
-    public Button PaymentBtn;
-    public Button SupplierBtn;
-    public Button ProductBtn;
-    public Button FeedbackBtn;
-    public Button AppointmentBtn;
-    public AnchorPane root;
-    public Label lblCustomer;
-    public Label lblCount;
-    public AnchorPane root1;
-    public AnchorPane root2;
-    public Label lblApCount;
-    public Label lblAppointment;
-    public AnchorPane root21;
-    public Label lblCompleteCount;
-    public Label lblCompleteAppointment;
-    public AnchorPane root212;
-    public Label lblInCompleteCount;
-    public Label lblInCompleteAppointment2;
-    public ImageView cmbMenu;
-    public ComboBox cmbMenuBar;
-    public AnchorPane root211;
-    public Label lblEmployeeCount;
-    public Label lblEmployee;
-    public Label lblFullPaymentCount;
-    public Label lblFullPayment;
-    public AnchorPane root2111;
-    public Button BtnFeedback;
-    public Label lblSupplierCount;
-    public Label lblGoodCommentCount;
-    public javafx.scene.chart.PieChart PieChart;
-    public AnchorPane rootNod25;
-    public Label lblDate;
-    public javafx.scene.chart.BarChart BarChart;
-    public Text txt;
+    @FXML
+    private JFXButton CustomerBtn;
 
-    private String fullText = "Hello ! Tharanga.";
-    private int currentIndex = 0;
+    @FXML
+    private JFXButton EmployeeBtn;
+
+    @FXML
+    private JFXButton HairCutBtn;
+
+    @FXML
+    private JFXButton HairCutBtn1;
+
+    @FXML
+    private JFXButton PaymentBtn;
+
+    @FXML
+    private PieChart PieChart;
+
+    @FXML
+    private JFXButton ProductBtn;
+
+    @FXML
+    private JFXButton SupplierBtn;
+
+    @FXML
+    private Label lblApCount;
+
+    @FXML
+    private Label lblAppointment;
+
+    @FXML
+    private Label lblCompleteAppointment;
+
+    @FXML
+    private Label lblCompleteCount;
+
+    @FXML
+    private Label lblCount;
+
+    @FXML
+    private Label lblCustomer;
+
+    @FXML
+    private Label lblDate;
+
+    @FXML
+    private Label lblEmployee;
+
+    @FXML
+    private Label lblEmployeeCount;
+
+    @FXML
+    private Label lblFullPayment;
+
+    @FXML
+    private Label lblFullPaymentCount;
+
+    @FXML
+    private Label lblInCompleteAppointment2;
+
+    @FXML
+    private Label lblInCompleteCount;
+
+    @FXML
+    private Label lblSupplier;
+
+    @FXML
+    private Label lblSupplierCount;
+
     @FXML
     private Label lblTime;
 
+    @FXML
+    private Rectangle rectangal;
+
+    @FXML
+    private Rectangle rectangal1;
+
+    @FXML
+    private AnchorPane root;
+
+    @FXML
+    private AnchorPane root1;
+
+    @FXML
+    private AnchorPane root2;
+
+    @FXML
+    private AnchorPane root21;
+
+    @FXML
+    private AnchorPane root211;
+
+    @FXML
+    private AnchorPane root2111;
+
+    @FXML
+    private AnchorPane root21111;
+
+    @FXML
+    private AnchorPane root212;
+
+    @FXML
+    private AnchorPane rootNode;
+
+    @FXML
+    private Text txt;
+
     private int cCount;
-
     private int aCount;
-
     private int eCount;
 
-    private int sCount;
+    private  int sCount;
 
 
-    public DashBoardFormController() throws IOException {
-    }
+
+
+    CustomerDAO customerDAO = (CustomerDAO) DAOFactory.getDaoFactory().getDAO(DAOFactory.DAOTypes.CUSTOMER);
+    AppointmentDAO appointmentDAO = (AppointmentDAO) DAOFactory.getDaoFactory().getDAO(DAOFactory.DAOTypes.APPOINTMENT);
+    EmployeeDAO employeeDAO = (EmployeeDAO) DAOFactory.getDaoFactory().getDAO(DAOFactory.DAOTypes.EMPLOYEE);
+    SupplierDAO supplierDAO = (SupplierDAO) DAOFactory.getDaoFactory().getDAO(DAOFactory.DAOTypes.SUPPLIER);
+    PaymentDAO paymentDAO = (PaymentDAO) DAOFactory.getDaoFactory().getDAO(DAOFactory.DAOTypes.PAYMENT);
+    QueryDAO queryDAO = (QueryDAO) DAOFactory.getDaoFactory().getDAO(DAOFactory.DAOTypes.QUERY);
+
 
     public void initialize() {
 
@@ -248,37 +311,21 @@ public class DashBoardFormController {
     }
 
 
-    public void btnEmployeeOnAction(ActionEvent actionEvent) throws IOException {
 
-        URL resource = getClass().getResource("/view/employee_form.fxml");
+
+
+    @FXML
+    void btnAppointmentOnAction(ActionEvent event) throws IOException {
+
+        URL resource = getClass().getResource("/view/appointmnt_form.fxml");
         FXMLLoader fxmlLoader = new FXMLLoader(resource);
         AnchorPane load = fxmlLoader.load();
         root1.getChildren().clear();
         root1.getChildren().add(load);
-
     }
 
-    public void btnProductOnAction(ActionEvent actionEvent) throws IOException {
-
-        URL resource = getClass().getResource("/view/product_form.fxml");
-        FXMLLoader fxmlLoader = new FXMLLoader(resource);
-        AnchorPane load = fxmlLoader.load();
-        root1.getChildren().clear();
-        root1.getChildren().add(load);
-
-    }
-
-    public void btnSupplierOnAction(ActionEvent actionEvent) throws IOException {
-
-        URL resource = getClass().getResource("/view/supplier_form.fxml");
-        FXMLLoader fxmlLoader = new FXMLLoader(resource);
-        AnchorPane load = fxmlLoader.load();
-        root1.getChildren().clear();
-        root1.getChildren().add(load);
-
-    }
-
-    public void btnCustomerOnAction(ActionEvent actionEvent) throws IOException {
+    @FXML
+    void btnCustomerOnAction(ActionEvent event) throws IOException {
 
         URL resource = getClass().getResource("/view/customer_form.fxml");
         FXMLLoader fxmlLoader = new FXMLLoader(resource);
@@ -288,7 +335,29 @@ public class DashBoardFormController {
 
     }
 
-    public void btnHariCutonAction(ActionEvent actionEvent) throws IOException {
+    @FXML
+    void btnDashBoardonAction(ActionEvent event) throws IOException {
+        URL resource = getClass().getResource("/view/home_page.fxml");
+        FXMLLoader fxmlLoader = new FXMLLoader(resource);
+        AnchorPane load = fxmlLoader.load();
+        root1.getChildren().clear();
+        root1.getChildren().add(load);
+
+    }
+
+    @FXML
+    void btnEmployeeOnAction(ActionEvent event) throws IOException {
+
+        URL resource = getClass().getResource("/view/employee_form.fxml");
+        FXMLLoader fxmlLoader = new FXMLLoader(resource);
+        AnchorPane load = fxmlLoader.load();
+        root1.getChildren().clear();
+        root1.getChildren().add(load);
+
+    }
+
+    @FXML
+    void btnHariCutonAction(ActionEvent event) throws IOException {
 
         URL resource = getClass().getResource("/view/haircut_form.fxml");
         FXMLLoader fxmlLoader = new FXMLLoader(resource);
@@ -298,68 +367,46 @@ public class DashBoardFormController {
         ;
     }
 
-    public void btnPaymentOnAction(ActionEvent actionEvent) throws IOException {
+    @FXML
+    void btnLogOutOnAction(ActionEvent event) {
+
+    }
+
+    @FXML
+    void btnPaymentOnAction(ActionEvent event) throws IOException {
 
         URL resource = getClass().getResource("/view/payment_form.fxml");
         FXMLLoader fxmlLoader = new FXMLLoader(resource);
         AnchorPane load = fxmlLoader.load();
         root1.getChildren().clear();
         root1.getChildren().add(load);
-        ;
     }
 
-    public void btnAppointmentOnAction(ActionEvent actionEvent) throws IOException {
+    @FXML
+    void btnProductOnAction(ActionEvent event) throws IOException {
 
-        URL resource = getClass().getResource("/view/appointmnt_form.fxml");
+        URL resource = getClass().getResource("/view/product_form.fxml");
         FXMLLoader fxmlLoader = new FXMLLoader(resource);
         AnchorPane load = fxmlLoader.load();
         root1.getChildren().clear();
         root1.getChildren().add(load);
 
+    }
+
+    @FXML
+    void btnProfileOnAction(ActionEvent event) {
 
     }
 
-    public void btnDashBoardonAction(ActionEvent actionEvent) throws IOException {
-        URL resource = getClass().getResource("/view/home_page.fxml");
+    @FXML
+    void btnSupplierOnAction(ActionEvent event) throws IOException {
+
+        URL resource = getClass().getResource("/view/supplier_form.fxml");
         FXMLLoader fxmlLoader = new FXMLLoader(resource);
         AnchorPane load = fxmlLoader.load();
         root1.getChildren().clear();
         root1.getChildren().add(load);
-    }
-
-
-    public void btnLogOutOnAction(ActionEvent actionEvent) throws IOException {
-
-        AnchorPane rootNode = FXMLLoader.load(this.getClass().getResource("/view/login_form.fxml"));
-
-        Scene scene = new Scene(rootNode);
-
-        Stage stage = (Stage) this.rootNode.getScene().getWindow();
-        stage.setScene(scene);
-        stage.setTitle("Login Form");
-    }
-
-    public void btnFeedbackOnAction(ActionEvent actionEvent) throws IOException {
-        AnchorPane rootNode = FXMLLoader.load(this.getClass().getResource("/view/feedback_form.fxml"));
-
-        Scene scene = new Scene(rootNode);
-        Stage stage = (Stage) this.BtnFeedback.getScene().getWindow();
-        stage.setScene(scene);
-        stage.setTitle("Login Form");
-    }
-
-    public void btnProfileOnAction(ActionEvent actionEvent) throws IOException {
-        URL resource = getClass().getResource("/view/profile_details.fxml");
-        FXMLLoader fxmlLoader = new FXMLLoader(resource);
-        AnchorPane load = fxmlLoader.load();
-        root1.getChildren().clear();
-        root1.getChildren().add(load);
-
 
     }
 
 }
-
-
-
-

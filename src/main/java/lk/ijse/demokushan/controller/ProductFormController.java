@@ -1,29 +1,25 @@
 package lk.ijse.demokushan.controller;
 
-import com.jfoenix.controls.JFXButton;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.shape.Rectangle;
-import javafx.stage.Stage;
 import lk.ijse.demokushan.Util.Regex;
-import lk.ijse.demokushan.model.*;
-import lk.ijse.demokushan.model.TM.HairCutTM;
-import lk.ijse.demokushan.model.TM.PaymentTM;
-import lk.ijse.demokushan.model.TM.ProductTM;
-import lk.ijse.demokushan.repository.*;
+import lk.ijse.demokushan.bo.BOFactory;
+import lk.ijse.demokushan.bo.custom.HairCutBO;
+import lk.ijse.demokushan.bo.custom.ProductBO;
+import lk.ijse.demokushan.bo.custom.ProductDetailsBO;
+import lk.ijse.demokushan.bo.custom.SupplierBO;
+import lk.ijse.demokushan.dto.ProductDTO;
+import lk.ijse.demokushan.entity.Product;
+import lk.ijse.demokushan.view.tdm.ProductTM;
 
-import java.io.IOException;
-import java.sql.ResultSet;
+
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 public class ProductFormController {
 
@@ -47,6 +43,12 @@ public class ProductFormController {
     public TextField txtSearch;
 
 
+    ProductBO productBO =(ProductBO) BOFactory.getBoFactory().getBO(BOFactory.BOTypes.PRODUCT);
+    SupplierBO supplierBO =(SupplierBO) BOFactory.getBoFactory().getBO(BOFactory.BOTypes.SUPPLIER);
+    ProductDetailsBO productDetailsBO  = (ProductDetailsBO) BOFactory.getBoFactory().getBO(BOFactory.BOTypes.PRODUCTDETAILS);
+
+    HairCutBO hairCutBO = (HairCutBO) BOFactory.getBoFactory().getBO(BOFactory.BOTypes.HAIRCUT);
+
     public void initialize() {
         setcellValues();
         loadAllProduct();
@@ -69,9 +71,10 @@ public class ProductFormController {
     }
 
     private void loadAllProductNames() {
+
         ObservableList<String> obList = FXCollections.observableArrayList();
         try {
-            List<String> nameList = HairCutRepo.getProductNames();
+            List<String> nameList = hairCutBO.getProductNames();
 
             for (String code : nameList) {
                 obList.add(code);
@@ -81,6 +84,8 @@ public class ProductFormController {
 
         } catch (SQLException e) {
             throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -89,7 +94,7 @@ public class ProductFormController {
 
         ObservableList<String> obList = FXCollections.observableArrayList();
         try {
-            List<String> nameList = SupplierRepo.getSupplierId();
+            List<String> nameList = supplierBO.getSupplierId();
 
             for (String code : nameList) {
                 obList.add(code);
@@ -98,18 +103,22 @@ public class ProductFormController {
 
         } catch (SQLException e) {
             throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
         }
     }
 
 
     private void genarateNextProductId() {
         try {
-            String currentId = ProductRepo.getCurrentId();
+            String currentId = productBO.generateNewID();
 
             String nextOrderId = genarateNextProductId(currentId);
             txtPId.setText(nextOrderId);
 
         } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }
@@ -127,7 +136,7 @@ public class ProductFormController {
         ObservableList<ProductTM> obList = FXCollections.observableArrayList();
 
         try {
-            List<Product> productsList = ProductRepo.getAll();
+            List<Product> productsList = productBO.getAll();
             for (Product proModle : productsList) {
 
                 ProductTM TM = new ProductTM(proModle.getProductId(), proModle.getName(), proModle.getUnitPrice(), proModle.getQtyOnHand());
@@ -137,6 +146,8 @@ public class ProductFormController {
 
             }
         } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
 
@@ -170,11 +181,11 @@ public class ProductFormController {
         String unitPrice = txtUPrice.getText();
         String qtyOnHand =txtQtyOnHand.getText();
 
-        Product product = new Product(productId, productName, unitPrice, qtyOnHand);
+       ProductDTO productDTO = new ProductDTO(productId, productName, unitPrice, qtyOnHand);
 
 
         try {
-            boolean isSaved = ProductRepo.save(product);
+            boolean isSaved = productBO.add(productDTO);
             if (isSaved) {
                 new Alert(Alert.AlertType.CONFIRMATION, "All data saved").show();
                 initialize();
@@ -184,6 +195,8 @@ public class ProductFormController {
             }
         } catch (
                 SQLException e) {
+            throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
 
@@ -213,12 +226,10 @@ public class ProductFormController {
         String unitPrice = txtUPrice.getText();
         String qtyOnHand =txtQtyOnHand.getText();
 
-
-
-        Product product = new Product(productId, productName, unitPrice, qtyOnHand);
+        ProductDTO productDTO = new ProductDTO(productId, productName, unitPrice, qtyOnHand);
 
         try {
-            boolean isUpdated = ProductRepo.update(product);
+            boolean isUpdated = productBO.update(productDTO);
             if (isUpdated) {
                 new Alert(Alert.AlertType.CONFIRMATION, "product updated!").show();
 
@@ -227,6 +238,8 @@ public class ProductFormController {
             }
         } catch (SQLException e) {
             new Alert(Alert.AlertType.ERROR, e.getMessage()).show();
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -250,7 +263,7 @@ public class ProductFormController {
         String id = txtPId.getText();
 
         try {
-            boolean isDeleted = ProductRepo.delete(id);
+            boolean isDeleted = productBO.delete(id);
             if (isDeleted) {
                 new Alert(Alert.AlertType.CONFIRMATION, "product deleted!").show();
 
@@ -259,6 +272,8 @@ public class ProductFormController {
             }
         } catch (SQLException e) {
             new Alert(Alert.AlertType.ERROR, e.getMessage()).show();
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -268,13 +283,13 @@ public class ProductFormController {
         return idValied ;
     }
 
-    public void btnSearchOnAction(ActionEvent actionEvent) throws SQLException {
+    public void btnSearchOnAction(ActionEvent actionEvent) throws SQLException, ClassNotFoundException {
 
         if(isValidIde()){
 
         String id = txtPId.getText();
 
-        Product product = ProductRepo.searchById(id);
+        Product product = productBO.search(id);
         if (product != null) {
             txtPId.setText(product.getProductId());
             txtPName.setText(product.getName());
@@ -307,7 +322,7 @@ public class ProductFormController {
 
 
         try {
-            boolean isPlaced = ProductDetailRepo.updatePrductDetailsTable(supplierId, productName, qty);
+            boolean isPlaced = productDetailsBO.updatePrductDetailsTable(supplierId, productName, qty);
             if (isPlaced) {
                 new Alert(Alert.AlertType.CONFIRMATION, "Product add Successfully!").show();
                 cmbSupplierId.setValue(null);
@@ -323,11 +338,11 @@ public class ProductFormController {
         }
     }
 
-    public void btnSearchchOnAction(ActionEvent actionEvent) throws SQLException {
+    public void btnSearchchOnAction(ActionEvent actionEvent) throws SQLException, ClassNotFoundException {
         
         String id = txtSearch.getText();
 
-        Product product = ProductRepo.searchById(id);
+        Product product = productBO.search(id);
         if (product != null) {
             txtPId.setText(product.getProductId());
             txtPName.setText(product.getName());

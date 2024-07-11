@@ -4,22 +4,19 @@ import com.jfoenix.controls.JFXButton;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.shape.Rectangle;
-import javafx.stage.Stage;
 import lk.ijse.demokushan.Util.Regex;
-import lk.ijse.demokushan.model.*;
-import lk.ijse.demokushan.model.TM.HairCutTM;
-import lk.ijse.demokushan.model.TM.PaymentTM;
-import lk.ijse.demokushan.model.TM.ProductTM;
-import lk.ijse.demokushan.repository.*;
+import lk.ijse.demokushan.bo.BOFactory;
+import lk.ijse.demokushan.bo.custom.HairCutBO;
+import lk.ijse.demokushan.entity.AddNewHairCut;
+import lk.ijse.demokushan.entity.HairCut;
+import lk.ijse.demokushan.entity.HairCutDetails;
+import lk.ijse.demokushan.view.tdm.HairCutTM;
+import lk.ijse.demokushan.dto.HairCutDTO;
 
-import java.io.IOException;
-import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -59,6 +56,9 @@ public class HairCutFormController {
 
     private ObservableList<HairCutTM> obList = FXCollections.observableArrayList();
 
+    HairCutBO hairCutBO =(HairCutBO) BOFactory.getBoFactory().getBO(BOFactory.BOTypes.HAIRCUT);
+
+
     public  void initialize(){
         setcellValuese();
         setcellValues();
@@ -83,12 +83,14 @@ public class HairCutFormController {
 
     private void genarateNextHairCutId() {
         try {
-            String currentId = HairCutRepo.getCurrentId();
+            String currentId = hairCutBO.generateNewID();
 
             String nextOrderId = generateNextHairCutId(currentId);
             txtHcId.setText(nextOrderId);
 
         } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }
@@ -105,7 +107,7 @@ public class HairCutFormController {
     private void loadAllProductNames() {
         ObservableList<String> obList = FXCollections.observableArrayList();
         try {
-            List<String> nameList = HairCutRepo.getProductNames();
+            List<String> nameList = hairCutBO.getProductNames();
 
             for (String code : nameList) {
                 obList.add(code);
@@ -114,6 +116,8 @@ public class HairCutFormController {
             cmbProductName.setItems(obList);
 
         } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }
@@ -124,7 +128,7 @@ public class HairCutFormController {
         ObservableList<HairCutTM> obList = FXCollections.observableArrayList();
 
         try {
-            List<HairCut> hairCutList = HairCutRepo.getAll();
+            List<HairCut> hairCutList = hairCutBO.getAll();
             for (HairCut hcModle : hairCutList){
 
                 HairCutTM TM = new HairCutTM(hcModle.getHairCutId(),hcModle.getStyle(),hcModle.getPrice());
@@ -134,6 +138,8 @@ public class HairCutFormController {
 
             }
         } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
 
@@ -161,7 +167,7 @@ public class HairCutFormController {
     }
 
 
-    public void btnSaveOnAction(ActionEvent event) throws SQLException {
+    public void btnSaveOnAction(ActionEvent event) throws SQLException, ClassNotFoundException {
 
         if (isValied()){
 
@@ -177,7 +183,7 @@ public class HairCutFormController {
         for (int i = 0; i < tblHairCutProductDetails.getItems().size(); i++) {
             HairCutTM tm = obList.get(i);
 
-            ResultSet productIdResultSet = HairCutRepo.getProductId(tm.getProductName());
+            ResultSet productIdResultSet = hairCutBO.getProductId(tm.getProductName());
             String pId = null;
             if (productIdResultSet.next()) {
                 pId = productIdResultSet.getString(1);
@@ -195,7 +201,7 @@ public class HairCutFormController {
 
         AddNewHairCut newHairCut = new AddNewHairCut(hairCut, odList);
         try {
-            boolean isPlaced = HairCutRepo.placeHairCut(newHairCut);
+            boolean isPlaced = hairCutBO.placeHairCut(newHairCut);
             if (isPlaced) {
                 new Alert(Alert.AlertType.CONFIRMATION, "Hair Cut Added Successfully!").show();
             } else {
@@ -232,10 +238,10 @@ public class HairCutFormController {
         String style = txtStyle.getText();
         double price = Double.parseDouble(txtPrice.getText());;
 
-        HairCut hairCut = new HairCut(hId, style, price);
+        HairCutDTO hairCut = new HairCutDTO(hId, style, price);
 
         try {
-            boolean isUpdated = HairCutRepo.update(hairCut);
+            boolean isUpdated = hairCutBO.update(hairCut);
             if(isUpdated) {
                 new Alert(Alert.AlertType.CONFIRMATION, "hairCut updated!").show();
 
@@ -244,6 +250,8 @@ public class HairCutFormController {
             }
         } catch (SQLException e) {
             new Alert(Alert.AlertType.ERROR, e.getMessage()).show();
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -266,7 +274,7 @@ public class HairCutFormController {
             String id = txtHcId.getText();
 
             try {
-                boolean isDeleted = HairCutRepo.delete(id);
+                boolean isDeleted = hairCutBO.delete(id);
                 if (isDeleted) {
                     new Alert(Alert.AlertType.CONFIRMATION, "haircut deleted!").show();
 
@@ -275,6 +283,8 @@ public class HairCutFormController {
                 }
             } catch (SQLException e) {
                 new Alert(Alert.AlertType.ERROR, e.getMessage()).show();
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException(e);
             }
         } else {
             Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -290,13 +300,13 @@ public class HairCutFormController {
         return idValied ;
     }
 
-    public void btnSearchOnAction(ActionEvent actionEvent) throws SQLException {
+    public void btnSearchOnAction(ActionEvent actionEvent) throws SQLException, ClassNotFoundException {
 
         if(isValidIde()){
 
         String id = txtHcId.getText();
 
-        HairCut hairCut = HairCutRepo.searchById(id);
+        HairCut hairCut = hairCutBO.search(id);
         if (hairCut != null) {
             txtHcId.setText(hairCut.getHairCutId());
             txtStyle.setText(hairCut.getStyle());
@@ -321,15 +331,15 @@ public class HairCutFormController {
       return idValied ;
 }
 
-    public void cmbProductNameOnAction(ActionEvent actionEvent) throws SQLException {
+    public void cmbProductNameOnAction(ActionEvent actionEvent) throws SQLException, ClassNotFoundException {
         getProductDetails();
     }
 
-    private void getProductDetails() throws SQLException {
+    private void getProductDetails() throws SQLException, ClassNotFoundException {
         ObservableList<String> obList = FXCollections.observableArrayList();
         String name = (String) cmbProductName.getValue();
 
-            List<String> detailList = HairCutRepo.getProductDetails(name);
+            List<String> detailList = hairCutBO.getProductDetails(name);
 
             lblProductId.setText(detailList.get(0));
             lblProductUnitPrice.setText(detailList.get(1));
@@ -393,10 +403,10 @@ public class HairCutFormController {
 
     }
 
-    public void btnSearchchOnAction(ActionEvent actionEvent) throws SQLException {
+    public void btnSearchchOnAction(ActionEvent actionEvent) throws SQLException, ClassNotFoundException {
         String id = txtSearch.getText();
 
-        HairCut hairCut = HairCutRepo.searchById(id);
+        HairCut hairCut = hairCutBO.search(id);
         if (hairCut != null) {
             txtHcId.setText(hairCut.getHairCutId());
             txtStyle.setText(hairCut.getStyle());

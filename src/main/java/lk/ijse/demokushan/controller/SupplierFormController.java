@@ -3,8 +3,6 @@ package lk.ijse.demokushan.controller;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -12,20 +10,14 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.shape.Rectangle;
-import javafx.stage.Stage;
 import lk.ijse.demokushan.Util.Regex;
-import lk.ijse.demokushan.model.Customer;
-import lk.ijse.demokushan.model.Employee;
-import lk.ijse.demokushan.model.Supplier;
-import lk.ijse.demokushan.model.TM.CustomerTM;
-import lk.ijse.demokushan.model.TM.ProductTM;
-import lk.ijse.demokushan.model.TM.SupplierTM;
-import lk.ijse.demokushan.repository.CustomerRepo;
-import lk.ijse.demokushan.repository.EmployeeRepo;
-import lk.ijse.demokushan.repository.ProductRepo;
-import lk.ijse.demokushan.repository.SupplierRepo;
+import lk.ijse.demokushan.bo.BOFactory;
+import lk.ijse.demokushan.bo.custom.SupplierBO;
+import lk.ijse.demokushan.dto.SupplierDTO;
+import lk.ijse.demokushan.entity.Supplier;
+import lk.ijse.demokushan.view.tdm.SupplierTM;
 
-import java.io.IOException;
+
 import java.sql.SQLException;
 import java.util.List;
 
@@ -43,6 +35,9 @@ public class SupplierFormController {
     public TableColumn colName;
     public TableColumn colNic;
     public TableColumn colNumber;
+
+
+    SupplierBO supplierBO =(SupplierBO) BOFactory.getBoFactory().getBO(BOFactory.BOTypes.SUPPLIER);
 
 
     public void initialize() {
@@ -66,12 +61,14 @@ public class SupplierFormController {
 
     private void genarateNextSupplierId() {
         try {
-            String currentId = SupplierRepo.getCurrentId();
+            String currentId = supplierBO.generateNewID();
 
             String nextOrderId = genarateNextSupplierId(currentId);
             txtSId.setText(nextOrderId);
 
         } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }
@@ -90,7 +87,7 @@ public class SupplierFormController {
         ObservableList<SupplierTM> obList = FXCollections.observableArrayList();
 
         try {
-            List<Supplier> supList = SupplierRepo.getAll();
+            List<Supplier> supList = supplierBO.getAll();
             for (Supplier supModle : supList) {
 
                 SupplierTM TM = new SupplierTM(supModle.getSupplierId(), supModle.getName(), supModle.getNic(), supModle.getPhoneNumber());
@@ -100,6 +97,8 @@ public class SupplierFormController {
 
             }
         } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
 
@@ -134,16 +133,18 @@ public class SupplierFormController {
             String nic = txtNic.getText();
             String phoneNumber = txtPNumber.getText();
 
-            Supplier supplier = new Supplier(sId, name, nic, phoneNumber);
+            SupplierDTO supplierDTO = new SupplierDTO(sId, name, nic, phoneNumber);
 
             try {
-                boolean isSaved = SupplierRepo.save(supplier);
+                boolean isSaved = supplierBO.add(supplierDTO);
                 if (isSaved) {
                     new Alert(Alert.AlertType.CONFIRMATION, "Supplier Saved!").show();
 //                clearFields();
                     initialize();
                 }
             } catch (SQLException e) {
+                throw new RuntimeException(e);
+            } catch (ClassNotFoundException e) {
                 throw new RuntimeException(e);
             }
         } else {
@@ -187,10 +188,10 @@ public class SupplierFormController {
         String phoneNumber = txtPNumber.getText();
 
 
-        Supplier supplier = new Supplier(supplierId, name, nic, phoneNumber);
+        SupplierDTO supplierDTO = new SupplierDTO(supplierId, name, nic, phoneNumber);
 
         try {
-            boolean isUpdated = SupplierRepo.update(supplier);
+            boolean isUpdated = supplierBO.update(supplierDTO);
             if (isUpdated) {
                 new Alert(Alert.AlertType.CONFIRMATION, "supplier updated!").show();
 
@@ -198,6 +199,8 @@ public class SupplierFormController {
             }
         } catch (SQLException e) {
             new Alert(Alert.AlertType.ERROR, e.getMessage()).show();
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
         }
 
     }
@@ -210,7 +213,7 @@ public class SupplierFormController {
             String nic = txtNic.getText();
 
             try {
-                boolean isDeleted = SupplierRepo.delete(nic);
+                boolean isDeleted = supplierBO.delete(nic);
                 if (isDeleted) {
                     new Alert(Alert.AlertType.CONFIRMATION, "supplier deleted!").show();
 
@@ -218,6 +221,8 @@ public class SupplierFormController {
                 }
             } catch (SQLException e) {
                 new Alert(Alert.AlertType.ERROR, e.getMessage()).show();
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException(e);
             }
         } else {
             Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -235,13 +240,13 @@ public class SupplierFormController {
     }
 
 
-    public void btnSearchOnAction(ActionEvent actionEvent) throws SQLException {
+    public void btnSearchOnAction(ActionEvent actionEvent) throws SQLException, ClassNotFoundException {
 
         if (isValidNIC()) {
 
             String nic = txtNic.getText();
 
-            Supplier supplier = SupplierRepo.searchByNic(nic);
+            Supplier supplier = supplierBO.search(nic);
             if (supplier != null) {
                 txtSId.setText(supplier.getSupplierId());
                 txtName.setText(supplier.getName());
